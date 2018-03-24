@@ -1,8 +1,8 @@
 package com.github.jasjisdo.ctview;
 
+import com.github.jasjisdo.ctview.eventhandler.GUIEventHandler;
+
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.*;
@@ -14,48 +14,6 @@ import java.io.*;
 
 public class CTScanView extends JFrame {
 
-    /*
-     /////////////////////
-     //  Inner Classes  //
-     /////////////////////
-     */
-
-    /*
-        This is the event handler for the application
-    */
-    private class GUIEventHandler implements ActionListener, ChangeListener {
-
-        //Change handler (e.g. for sliders)
-        public void stateChanged(ChangeEvent e) {
-//            System.out.println(yslice_slider.getValue());
-//            //e.g. do something to change the image here
-            if (e.getSource() == zSliceSlider) {
-                // update slider value
-                updateZSliderValue();
-            }
-            if (e.getSource() == ySliceSlider) {
-                // update slider value
-                updateYSliderValue();
-            }
-            if (e.getSource() == xSliceSlider) {
-                // update slider value
-                updateXSliderValue();
-            }
-        }
-
-        //action handlers (e.g. for buttons)
-        public void actionPerformed(ActionEvent event) {
-            if (event.getSource() == MIPButton) {
-                //e.g. do something to change the image here
-                //e.g. call MIP function
-                int zValue = zSliceSlider.getValue();
-                zImage1 = mip(zImage1, zValue); //(although mine is called MIP, it doesn't do MIP)
-
-                // Update image
-                imageIcon1.setIcon(new ImageIcon(zImage1));
-            }
-        }
-    }
     /*
         This is a frame to show an image in detail and with zoom
      */
@@ -172,12 +130,12 @@ public class CTScanView extends JFrame {
     private JPanel gridPanel = new JPanel();
     private JScrollPane gridScrollPane = new JScrollPane();
     private JButton loadButton; // an button to load the CThead.dms file
-    private JButton MIPButton; //an example button to switch to MIP mode
+    private JButton mipButton; // an example button to switch to MIP mode
     private JLabel imageIcon1; //using JLabel to display an image (check online documentation)
     private JLabel imageIcon2; //using JLabel to display an image (check online documentation)
     private JLabel imageIcon3; //using JLabel to display an image (check online documentation)
     private JSlider zSliceSlider, ySliceSlider, xSliceSlider; //sliders to step through the slices (z and y directions) (remember 113 slices in z direction 0-112)
-    private BufferedImage zImage1, yImage2, xImage3; //storing the image in memory
+    private BufferedImage zImage1, yImage2, xImage3; // storing the image in memory
     private short cthead[][][]; //store the 3D volume data set
     private short min, max; //min/max value in the 3D volume data set
 
@@ -242,7 +200,7 @@ public class CTScanView extends JFrame {
                     zSliceSlider.setEnabled(true);  // activate slider only when file is loaded
                     ySliceSlider.setEnabled(true);  // activate slider only when file is loaded
                     xSliceSlider.setEnabled(true);  // activate slider only when file is loaded
-                    MIPButton.setEnabled(true);     // activate button only when file is loaded
+                    mipButton.setEnabled(true);     // activate button only when file is loaded
 
                     for (int imgNr = 0; imgNr < 113; imgNr++) {
                         final int num = imgNr;
@@ -390,7 +348,7 @@ public class CTScanView extends JFrame {
         });
 
         // Then the invert button
-        MIPButton = new JButton("MIP");
+        mipButton = new JButton("MIP");
 
         // add elements to ui, order matters in flow layout
         titlePanel.add(loadButton);
@@ -401,13 +359,13 @@ public class CTScanView extends JFrame {
         imagesPanel.add(ySliceSlider);
         imagesPanel.add(imageIcon3);
         imagesPanel.add(xSliceSlider);
-        imagesPanel.add(MIPButton);
+        imagesPanel.add(mipButton);
 
         // Now all the handlers class
-        CTScanView.GUIEventHandler handler = new CTScanView.GUIEventHandler();
+        GUIEventHandler handler = new GUIEventHandler(this);
 
         // associate appropriate handlers
-        MIPButton.addActionListener(handler);
+        mipButton.addActionListener(handler);
         ySliceSlider.addChangeListener(handler);
         zSliceSlider.addChangeListener(handler);
         xSliceSlider.addChangeListener(handler);
@@ -416,7 +374,7 @@ public class CTScanView extends JFrame {
         zSliceSlider.setEnabled(false);
         ySliceSlider.setEnabled(false);
         xSliceSlider.setEnabled(false);
-        MIPButton.setEnabled(false);
+        mipButton.setEnabled(false);
         loadButton.setEnabled(false); // activated when ui becomes visible.
 
         // ... and display everything
@@ -465,7 +423,7 @@ public class CTScanView extends JFrame {
         //therefore histogram equalization would be a good thing
     }
 
-    private void updateZSliderValue() {
+    public void updateZSliderValue() {
         final int zValue = zSliceSlider.getValue();
 
         // Update image
@@ -480,7 +438,7 @@ public class CTScanView extends JFrame {
         });
     }
 
-    private void updateYSliderValue() {
+    public void updateYSliderValue() {
         final int yValue = ySliceSlider.getValue();
 
         // Update image
@@ -497,7 +455,7 @@ public class CTScanView extends JFrame {
         });
     }
 
-    private void updateXSliderValue() {
+    public void updateXSliderValue() {
         final int xValue = xSliceSlider.getValue();
 
         // Update image
@@ -537,7 +495,7 @@ public class CTScanView extends JFrame {
         the image carrying out the copying of a slice of data into the
 		image.
     */
-    private BufferedImage mip(BufferedImage image, int k) {
+    public BufferedImage mip(BufferedImage image, int k) {
         //Get image dimensions, and declare loop variables
         int w = image.getWidth(), h = image.getHeight();
         //Obtain pointer to data for fast processing
@@ -723,6 +681,71 @@ public class CTScanView extends JFrame {
             }
         }
         return newImage;
+    }
+
+    /*
+     //////////////
+     //  Getter  //
+     //////////////
+     */
+
+    public BufferedImage getzImage1() {
+        return zImage1;
+    }
+
+    public BufferedImage getyImage2() {
+        return yImage2;
+    }
+
+    public BufferedImage getxImage3() {
+        return xImage3;
+    }
+
+    public JLabel getImageIcon1() {
+        return imageIcon1;
+    }
+
+
+    public JLabel getImageIcon2() {
+        return imageIcon2;
+    }
+
+    public JLabel getImageIcon3() {
+        return imageIcon3;
+    }
+
+    public JButton getMipButton() {
+        return mipButton;
+    }
+
+    public JSlider getzSliceSlider() {
+        return zSliceSlider;
+    }
+
+    public JSlider getySliceSlider() {
+        return ySliceSlider;
+    }
+
+    public JSlider getxSliceSlider() {
+        return xSliceSlider;
+    }
+
+    /*
+     //////////////
+     //  Setter  //
+     //////////////
+     */
+
+    public void setzImage1(BufferedImage zImage1) {
+        this.zImage1 = zImage1;
+    }
+
+    public void setyImage2(BufferedImage yImage2) {
+        this.yImage2 = yImage2;
+    }
+
+    public void setxImage3(BufferedImage xImage3) {
+        this.xImage3 = xImage3;
     }
 
     /*
