@@ -20,15 +20,10 @@ public class CTScanView extends JFrame {
      */
     private class DetailImageFrame extends JFrame {
 
-        private JFrame parentFrame;
-        private BufferedImage image;
         private final JLabel imageLabel;
 
         DetailImageFrame(final JFrame parentFrame, final BufferedImage image) throws HeadlessException {
             super("Detail Image View");
-
-            this.parentFrame = parentFrame;
-            this.image = image;
 
             Container container = this.getContentPane();
                 BorderLayout borderLayout = new BorderLayout();
@@ -55,13 +50,10 @@ public class CTScanView extends JFrame {
                     public void actionPerformed(ActionEvent e) {
                         final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
                         final BufferedImage image = (BufferedImage) imageIcon.getImage();
-                        SwingUtilities.invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                final BufferedImage scaledImage = scaleRatio(0.8f, 0.8f, image);
-                                imageLabel.setIcon(new ImageIcon(scaledImage));
-                                imageLabel.validate();
-                            }
+                        SwingUtilities.invokeLater(() -> {
+                            final BufferedImage scaledImage = scaleRatio(0.8f, 0.8f, image);
+                            imageLabel.setIcon(new ImageIcon(scaledImage));
+                            imageLabel.validate();
                         });
                     }
                 });
@@ -131,7 +123,7 @@ public class CTScanView extends JFrame {
     private JLabel imageIcon2; //using JLabel to display an image (check online documentation)
     private JLabel imageIcon3; //using JLabel to display an image (check online documentation)
     private JSlider zSliceSlider, ySliceSlider, xSliceSlider; //sliders to step through the slices (z and y directions) (remember 113 slices in z direction 0-112)
-    private BufferedImage zImage1, yImage2, xImage3; // storing the image in memory
+    private @NonNull BufferedImage zImage1, yImage2, xImage3; // storing the image in memory
     private short cthead[][][]; //store the 3D volume data set
     private short min, max; //min/max value in the 3D volume data set
 
@@ -203,7 +195,7 @@ public class CTScanView extends JFrame {
                         SwingUtilities.invokeLater(new Runnable() {
                             @Override
                             public void run() {
-                                BufferedImage image = updateZAxis(zImage1, num);
+                                BufferedImage image = updateAxis(zImage1, num, ImageUpdateDirection.Z_AXIS);
                                 BufferedImage scaledImage = scale(128, 128, image);
                                 JLabel label = new JLabel(new ImageIcon(scaledImage));
                                 gridPanel.add(label);
@@ -216,7 +208,7 @@ public class CTScanView extends JFrame {
                         SwingUtilities.invokeLater(new Runnable() {
                             @Override
                             public void run() {
-                                BufferedImage image = updateYAxis(yImage2, num);
+                                BufferedImage image = updateAxis(yImage2, num, ImageUpdateDirection.Y_AXIS);
                                 BufferedImage scaledImage = scale(128, 128, image);
                                 JLabel label = new JLabel(new ImageIcon(scaledImage));
                                 gridPanel.add(label);
@@ -229,7 +221,7 @@ public class CTScanView extends JFrame {
                         SwingUtilities.invokeLater(new Runnable() {
                             @Override
                             public void run() {
-                                BufferedImage image = updateXAxis(xImage3, num);
+                                BufferedImage image = updateAxis(xImage3, num, ImageUpdateDirection.X_AXIS);
                                 BufferedImage scaledImage = scale(128, 128, image);
                                 JLabel label = new JLabel(new ImageIcon(scaledImage));
                                 gridPanel.add(label);
@@ -420,27 +412,25 @@ public class CTScanView extends JFrame {
     }
 
     public void updateImage(@NonNull ImageUpdateDirection updateDirection) {
-        switch (updateDirection) {
-            case Z_AXIS: {
-                SwingUtilities.invokeLater( () -> {
-                    zImage1 = updateZAxis(zImage1, zSliceSlider.getValue());
-                    imageIcon1.setIcon(new ImageIcon(zImage1));
-                } );
-            }
-            case Y_AXIS: {
-                SwingUtilities.invokeLater( () -> {
-                    yImage2 = updateYAxis(yImage2, ySliceSlider.getValue());
-                    BufferedImage scaledImage2 = scale(256, 256, yImage2);
-                    imageIcon2.setIcon(new ImageIcon(scaledImage2));
-                } );
-            }
-            case X_AXIS: {
-                SwingUtilities.invokeLater( () -> {
-                    xImage3 = updateXAxis(xImage3, xSliceSlider.getValue());
-                    BufferedImage scaledImage3 = scale(256, 256, xImage3);
-                    imageIcon3.setIcon(new ImageIcon(scaledImage3));
-                } );
-            }
+        if( updateDirection.ordinal() == ImageUpdateDirection.Z_AXIS.ordinal() ) {
+            SwingUtilities.invokeLater( () -> {
+                zImage1 = updateAxis(zImage1, zSliceSlider.getValue(), ImageUpdateDirection.Z_AXIS);
+                imageIcon1.setIcon(new ImageIcon(zImage1));
+            } );
+        }
+        else if ( updateDirection.ordinal() == ImageUpdateDirection.Y_AXIS.ordinal() ) {
+            SwingUtilities.invokeLater( () -> {
+                yImage2 = updateAxis(yImage2, ySliceSlider.getValue(), ImageUpdateDirection.Y_AXIS);
+                BufferedImage scaledImage2 = scale(256, 256, yImage2);
+                imageIcon2.setIcon(new ImageIcon(scaledImage2));
+            } );
+        }
+        else if ( updateDirection.ordinal() == ImageUpdateDirection.X_AXIS.ordinal() ) {
+            SwingUtilities.invokeLater( () -> {
+                xImage3 = updateAxis(xImage3, xSliceSlider.getValue(), ImageUpdateDirection.X_AXIS);
+                BufferedImage scaledImage3 = scale(256, 256, xImage3);
+                imageIcon3.setIcon(new ImageIcon(scaledImage3));
+            } );
         }
     }
 
@@ -499,102 +489,49 @@ public class CTScanView extends JFrame {
         return image;
     }
 
-    private BufferedImage updateZAxis(BufferedImage image, int k) {
-        //Get image dimensions, and declare loop variables
-        int w = image.getWidth(), h = image.getHeight();
-        //Obtain pointer to data for fast processing
-        byte[] data = getImageData(image);
-        float col;
-        short datum;
-        //Shows how to loop through each pixel and colour
-        //Try to always use j for loops in y, and i for loops in x
-        //as this makes the code more readable
-        for (int j = 0; j < h; j++) {
-            for (int i = 0; i < w; i++) {
-                //at this point (i,j) is a single pixel in the image
-                //here you would need to do something to (i,j) if the image size
-                //does not match the slice size (e.g. during an image resizing operation
-                //If you don't do this, your j,i could be outside the array bounds
-                //In the framework, the image is 256x256 and the data set slices are 256x256
-                //so I don't do anything - this also leaves you something to do for the assignment
-                //datum=cthead[76][j][i]; //get values from slice 76 (change this in your assignment)
-                datum = cthead[k][j][i]; //get values from slice from value of param k (change this in your assignment)
-                //calculate the colour by performing a mapping from [min,max] -> [0,255]
-                col = (255.0f * ((float) datum - (float) min) / ((float) (max - min)));
-                for (int c = 0; c < 3; c++) {
-                    //and now we are looping through the bgr components of the pixel
-                    //set the colour component c of pixel (i,j)
-                    data[c + 3 * i + 3 * j * w] = (byte) col;
-                } // colour loop
-            } // column loop
-        } // row loop
-
-        return image;
-    }
-
-    private BufferedImage updateYAxis(BufferedImage image, int j) {
-        //Get image dimensions, and declare loop variables
-        int w = image.getWidth(), h = image.getHeight();
-        //Obtain pointer to data for fast processing
-        byte[] data = getImageData(image);
-        float col;
-        short datum;
-        //Shows how to loop through each pixel and colour
-        //Try to always use k for loops in z, and i for loops in x
-        //as this makes the code more readable
-        for (int k = 0; k < h; k++) {
-            for (int i = 0; i < w; i++) {
-                //at this point (i,j) is a single pixel in the image
-                //here you would need to do something to (i,j) if the image size
-                //does not match the slice size (e.g. during an image resizing operation
-                //If you don't do this, your j,i could be outside the array bounds
-                //In the framework, the image is 256x256 and the data set slices are 256x256
-                //so I don't do anything - this also leaves you something to do for the assignment
-                //datum=cthead[76][j][i]; //get values from slice 76 (change this in your assignment)
-                datum = cthead[k][j][i]; //get values from slice from value of param k (change this in your assignment)
-                //calculate the colour by performing a mapping from [min,max] -> [0,255]
-                col = (255.0f * ((float) datum - (float) min) / ((float) (max - min)));
-                for (int c = 0; c < 3; c++) {
-                    //and now we are looping through the bgr components of the pixel
-                    //set the colour component c of pixel (i,j)
-                    data[c + 3 * i + 3 * k * w] = (byte) col;
-                } // colour loop
-            } // column loop
-        } // row loop
-
-        return image;
-    }
-
-    private BufferedImage updateXAxis(BufferedImage image, int i) {
-        //Get image dimensions, and declare loop variables
-        int w = image.getWidth(), h = image.getHeight();
-        //Obtain pointer to data for fast processing
-        byte[] data = getImageData(image);
-        float col;
-        short datum;
-        //Shows how to loop through each pixel and colour
-        //Try to always use k for loops in z, and j for loops in y
-        //as this makes the code more readable
-        for (int j = 0; j < h; j++) {
-            for (int k = 0; k < w; k++) {
-                //at this point (i,j) is a single pixel in the image
-                //here you would need to do something to (i,j) if the image size
-                //does not match the slice size (e.g. during an image resizing operation
-                //If you don't do this, your j,i could be outside the array bounds
-                //In the framework, the image is 256x256 and the data set slices are 256x256
-                //so I don't do anything - this also leaves you something to do for the assignment
-                //datum=cthead[76][j][i]; //get values from slice 76 (change this in your assignment)
-                datum = cthead[k][j][i]; //get values from slice from value of param k (change this in your assignment)
-                //calculate the colour by performing a mapping from [min,max] -> [0,255]
-                col = (255.0f * ((float) datum - (float) min) / ((float) (max - min)));
-                for (int c = 0; c < 3; c++) {
-                    //and now we are looping through the bgr components of the pixel
-                    //set the colour component c of pixel (i,j)
-                    data[c + 3 * k + 3 * j * w] = (byte) col;
-                } // colour loop
-            } // column loop
-        } // row loop
-
+    private BufferedImage updateAxis(BufferedImage image, int sliderValue, ImageUpdateDirection axisDirection) {
+        final int width = image.getWidth(), height = image.getHeight();
+        final byte[] data = getImageData(image);
+        float color;
+        short pixel;
+        switch (axisDirection) {
+            case Z_AXIS: {
+                for (int j = 0; j < height; j++) {
+                    for (int i = 0; i < width; i++) {
+                        pixel = cthead[sliderValue][j][i];
+                        color = (255.0f * ((float) pixel - (float) min) / ((float) (max - min)));
+                        for (int c = 0; c < 3; c++) {
+                            data[c + 3 * i + 3 * j * width] = (byte) color;
+                        }
+                    }
+                }
+                return image;
+            }
+            case Y_AXIS: {
+                for (int k = 0; k < height; k++) {
+                    for (int i = 0; i < width; i++) {
+                        pixel = cthead[k][sliderValue][i];
+                        color = (255.0f * ((float) pixel - (float) min) / ((float) (max - min)));
+                        for (int c = 0; c < 3; c++) {
+                            data[c + 3 * i + 3 * k * width] = (byte) color;
+                        }
+                    }
+                }
+                return image;
+            }
+            case X_AXIS: {
+                for (int j = 0; j < height; j++) {
+                    for (int k = 0; k < width; k++) {
+                        pixel = cthead[k][j][sliderValue];
+                        color = (255.0f * ((float) pixel - (float) min) / ((float) (max - min)));
+                        for (int c = 0; c < 3; c++) {
+                            data[c + 3 * k + 3 * j * width] = (byte) color;
+                        }
+                    }
+                }
+            }
+            return image;
+        }
         return image;
     }
 
