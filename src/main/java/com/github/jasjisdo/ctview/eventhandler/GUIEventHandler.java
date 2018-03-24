@@ -1,6 +1,7 @@
 package com.github.jasjisdo.ctview.eventhandler;
 
 import com.github.jasjisdo.ctview.CTScanView;
+import com.github.jasjisdo.ctview.ImageUpdateDirection;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -24,9 +25,9 @@ public class GUIEventHandler implements ActionListener, ChangeListener {
     }
 
     public void stateChanged(ChangeEvent e) {
-        if ( e.getSource() == ctScanView.getzSliceSlider() ) { ctScanView.updateZSliderValue(); }
-        else if ( e.getSource() == ctScanView.getySliceSlider() ) { ctScanView.updateYSliderValue(); }
-        else if ( e.getSource() == ctScanView.getxSliceSlider() ) { ctScanView.updateXSliderValue(); }
+        if ( e.getSource() == ctScanView.getzSliceSlider() ) { ctScanView.updateImage(ImageUpdateDirection.Z_AXIS); }
+        else if ( e.getSource() == ctScanView.getySliceSlider() ) { ctScanView.updateImage(ImageUpdateDirection.Y_AXIS); }
+        else if ( e.getSource() == ctScanView.getxSliceSlider() ) { ctScanView.updateImage(ImageUpdateDirection.X_AXIS); }
     }
 
     public void actionPerformed(ActionEvent event) {

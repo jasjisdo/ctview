@@ -1,6 +1,7 @@
 package com.github.jasjisdo.ctview;
 
 import com.github.jasjisdo.ctview.eventhandler.GUIEventHandler;
+import lombok.NonNull;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -26,74 +27,69 @@ public class CTScanView extends JFrame {
         DetailImageFrame(final JFrame parentFrame, final BufferedImage image) throws HeadlessException {
             super("Detail Image View");
 
-            final JFrame thisFrame = this;
-
             this.parentFrame = parentFrame;
             this.image = image;
 
             Container container = this.getContentPane();
-            BorderLayout borderLayout = new BorderLayout();
-            container.setLayout(borderLayout);
+                BorderLayout borderLayout = new BorderLayout();
+                container.setLayout(borderLayout);
 
-            JPanel buttonPanel = new JPanel();
-            buttonPanel.setLayout(new FlowLayout());
-            JButton plus = new JButton("+");
-            plus.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
-                    final BufferedImage image = (BufferedImage) imageIcon.getImage();
-                    SwingUtilities.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
+                JPanel buttonPanel = new JPanel();
+                buttonPanel.setLayout(new FlowLayout());
+                JButton plus = new JButton("+");
+                plus.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
+                        final BufferedImage image = (BufferedImage) imageIcon.getImage();
+                        SwingUtilities.invokeLater(() -> {
                             final BufferedImage scaledImage = scaleRatio(1.2f, 1.2f, image);
                             imageLabel.setIcon(new ImageIcon(scaledImage));
                             imageLabel.validate();
-                        }
-                    });
-                }
-            });
-            JButton minus = new JButton("-");
-            minus.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
-                    final BufferedImage image = (BufferedImage) imageIcon.getImage();
-                    SwingUtilities.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            final BufferedImage scaledImage = scaleRatio(0.8f, 0.8f, image);
-                            imageLabel.setIcon(new ImageIcon(scaledImage));
-                            imageLabel.validate();
-                        }
-                    });
-                }
-            });
-            buttonPanel.add(plus);
-            buttonPanel.add(minus);
-            container.add(buttonPanel, BorderLayout.NORTH);
+                        });
+                    }
+                });
+                JButton minus = new JButton("-");
+                minus.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
+                        final BufferedImage image = (BufferedImage) imageIcon.getImage();
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                final BufferedImage scaledImage = scaleRatio(0.8f, 0.8f, image);
+                                imageLabel.setIcon(new ImageIcon(scaledImage));
+                                imageLabel.validate();
+                            }
+                        });
+                    }
+                });
+                buttonPanel.add(plus);
+                buttonPanel.add(minus);
+                container.add(buttonPanel, BorderLayout.NORTH);
 
-            imageLabel = new JLabel(new ImageIcon(image));
-            JScrollPane scrollPane = new JScrollPane();
-            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            scrollPane.getViewport().add(imageLabel, null);
-            scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-            container.add(scrollPane, BorderLayout.CENTER);
+                imageLabel = new JLabel(new ImageIcon(image));
+                JScrollPane scrollPane = new JScrollPane();
+                scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+                scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+                scrollPane.getViewport().add(imageLabel, null);
+                scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+                container.add(scrollPane, BorderLayout.CENTER);
 
-            this.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowOpened(WindowEvent e) {
-                    super.windowOpened(e);
-                    parentFrame.setEnabled(false);
-                }
-                @Override
-                public void windowClosed(WindowEvent e) {
-                    super.windowClosed(e);
-                    parentFrame.setEnabled(true);
-                    parentFrame.setVisible(true);
-                }
-            });
+                this.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowOpened(WindowEvent e) {
+                        super.windowOpened(e);
+                        parentFrame.setEnabled(false);
+                    }
+                    @Override
+                    public void windowClosed(WindowEvent e) {
+                        super.windowClosed(e);
+                        parentFrame.setEnabled(true);
+                        parentFrame.setVisible(true);
+                    }
+                });
         }
     }
 
@@ -252,9 +248,9 @@ public class CTScanView extends JFrame {
                         }
                     });
 
-                    updateXSliderValue();
-                    updateYSliderValue();
-                    updateZSliderValue();
+                    updateImage(ImageUpdateDirection.X_AXIS);
+                    updateImage(ImageUpdateDirection.Y_AXIS);
+                    updateImage(ImageUpdateDirection.Z_AXIS);
 
                 } catch (IOException ioe) {
                     ioe.printStackTrace();
@@ -423,55 +419,30 @@ public class CTScanView extends JFrame {
         //therefore histogram equalization would be a good thing
     }
 
-    public void updateZSliderValue() {
-        final int zValue = zSliceSlider.getValue();
-
-        // Update image
-        // update ui in a swing ui thread. THIS IS recommended because it much more stable on most OS.
-        // Cause a smoother update of the image label.
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                zImage1 = updateZAxis(zImage1, zValue);
-                imageIcon1.setIcon(new ImageIcon(zImage1));
+    public void updateImage(@NonNull ImageUpdateDirection updateDirection) {
+        switch (updateDirection) {
+            case Z_AXIS: {
+                SwingUtilities.invokeLater( () -> {
+                    zImage1 = updateZAxis(zImage1, zSliceSlider.getValue());
+                    imageIcon1.setIcon(new ImageIcon(zImage1));
+                } );
             }
-        });
-    }
-
-    public void updateYSliderValue() {
-        final int yValue = ySliceSlider.getValue();
-
-        // Update image
-        // update ui in a swing ui thread. THIS IS recommended because it much more stable on most OS.
-        // Cause a smoother update of the image label.
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                yImage2 = updateYAxis(yImage2, yValue);
-                // Image scaledImage2 = image2.getScaledInstance(256, 256, Image.SCALE_SMOOTH);
-                BufferedImage scaledImage2 = scale(256, 256, yImage2);
-                imageIcon2.setIcon(new ImageIcon(scaledImage2));
+            case Y_AXIS: {
+                SwingUtilities.invokeLater( () -> {
+                    yImage2 = updateYAxis(yImage2, ySliceSlider.getValue());
+                    BufferedImage scaledImage2 = scale(256, 256, yImage2);
+                    imageIcon2.setIcon(new ImageIcon(scaledImage2));
+                } );
             }
-        });
-    }
-
-    public void updateXSliderValue() {
-        final int xValue = xSliceSlider.getValue();
-
-        // Update image
-        // update ui in a swing ui thread. THIS IS recommended because it much more stable on most OS.
-        // Cause a smoother update of the image label.
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                xImage3 = updateXAxis(xImage3, xValue);
-                // Image scaledImage3 = image3.getScaledInstance(256, 256, Image.SCALE_SMOOTH);
-                BufferedImage scaledImage3 = scale(256, 256, xImage3);
-                imageIcon3.setIcon(new ImageIcon(scaledImage3));
+            case X_AXIS: {
+                SwingUtilities.invokeLater( () -> {
+                    xImage3 = updateXAxis(xImage3, xSliceSlider.getValue());
+                    BufferedImage scaledImage3 = scale(256, 256, xImage3);
+                    imageIcon3.setIcon(new ImageIcon(scaledImage3));
+                } );
             }
-        });
+        }
     }
-
 
     /*
         This function will return a pointer to an array
