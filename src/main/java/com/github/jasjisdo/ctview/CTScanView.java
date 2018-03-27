@@ -1,6 +1,9 @@
 package com.github.jasjisdo.ctview;
 
+import com.github.jasjisdo.ctview.components.DetailImageFrame;
 import com.github.jasjisdo.ctview.eventhandler.GUIEventHandler;
+import com.github.jasjisdo.ctview.filefilter.DmsFileFilter;
+import com.github.jasjisdo.ctview.listener.LoadButtonActionListener;
 import lombok.NonNull;
 
 import javax.swing.*;
@@ -16,116 +19,27 @@ import java.io.*;
 public class CTScanView extends JFrame {
 
     /*
-        This is a frame to show an image in detail and with zoom
-     */
-    private class DetailImageFrame extends JFrame {
-
-        private final JLabel imageLabel;
-
-        DetailImageFrame(final JFrame parentFrame, final BufferedImage image) throws HeadlessException {
-            super("Detail Image View");
-
-            Container container = this.getContentPane();
-                BorderLayout borderLayout = new BorderLayout();
-                container.setLayout(borderLayout);
-
-                JPanel buttonPanel = new JPanel();
-                buttonPanel.setLayout(new FlowLayout());
-                JButton plus = new JButton("+");
-                plus.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
-                        final BufferedImage image = (BufferedImage) imageIcon.getImage();
-                        SwingUtilities.invokeLater(() -> {
-                            final BufferedImage scaledImage = scaleRatio(1.2f, 1.2f, image);
-                            imageLabel.setIcon(new ImageIcon(scaledImage));
-                            imageLabel.validate();
-                        });
-                    }
-                });
-                JButton minus = new JButton("-");
-                minus.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-                        final ImageIcon imageIcon = (ImageIcon) imageLabel.getIcon();
-                        final BufferedImage image = (BufferedImage) imageIcon.getImage();
-                        SwingUtilities.invokeLater(() -> {
-                            final BufferedImage scaledImage = scaleRatio(0.8f, 0.8f, image);
-                            imageLabel.setIcon(new ImageIcon(scaledImage));
-                            imageLabel.validate();
-                        });
-                    }
-                });
-                buttonPanel.add(plus);
-                buttonPanel.add(minus);
-                container.add(buttonPanel, BorderLayout.NORTH);
-
-                imageLabel = new JLabel(new ImageIcon(image));
-                JScrollPane scrollPane = new JScrollPane();
-                scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-                scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-                scrollPane.getViewport().add(imageLabel, null);
-                scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-                container.add(scrollPane, BorderLayout.CENTER);
-
-                this.addWindowListener(new WindowAdapter() {
-                    @Override
-                    public void windowOpened(WindowEvent e) {
-                        super.windowOpened(e);
-                        parentFrame.setEnabled(false);
-                    }
-                    @Override
-                    public void windowClosed(WindowEvent e) {
-                        super.windowClosed(e);
-                        parentFrame.setEnabled(true);
-                        parentFrame.setVisible(true);
-                    }
-                });
-        }
-    }
-
-    /*
      //////////////////////////////
      //  Class Fields / Members  //
      //////////////////////////////
      */
 
     private JFileChooser fileChooser = new JFileChooser();
-
-    private FileFilter filter = new FileFilter() {
-        @Override
-        public boolean accept(File f) {
-            return f.isDirectory() || f.getName().endsWith(".dms");
-        }
-
-        @Override
-        public String getDescription() {
-            return "DMS file";
-        }
-    };
-
-    private ComponentListener componentListener = new ComponentAdapter() {
-        @Override
-        public void componentShown(ComponentEvent e) {
-            super.componentShown(e);
-            loadButton.setEnabled(true); // activate load button when ui is shown.
-        }
-    };
-
-    private JPanel titlePanel = new JPanel();
-    private JPanel imagesPanel = new JPanel();
     private JPanel gridPanel = new JPanel();
     private JScrollPane gridScrollPane = new JScrollPane();
-    private JButton loadButton; // an button to load the CThead.dms file
-    private JButton mipButton; // an example button to switch to MIP mode
-    private JLabel imageIcon1; //using JLabel to display an image (check online documentation)
-    private JLabel imageIcon2; //using JLabel to display an image (check online documentation)
-    private JLabel imageIcon3; //using JLabel to display an image (check online documentation)
-    private JSlider zSliceSlider, ySliceSlider, xSliceSlider; //sliders to step through the slices (z and y directions) (remember 113 slices in z direction 0-112)
-    private @NonNull BufferedImage zImage1, yImage2, xImage3; // storing the image in memory
-    private short cthead[][][]; //store the 3D volume data set
-    private short min, max; //min/max value in the 3D volume data set
+    private JButton loadButton;             // an button to load the CThead.dms file
+    private JButton mipButton;              // an example button to switch to MIP mode
+    private JLabel imageIcon1;              // using JLabel to display an image (check online documentation)
+    private JLabel imageIcon2;              // using JLabel to display an image (check online documentation)
+    private JLabel imageIcon3;              // using JLabel to display an image (check online documentation)
+    private JSlider zSliceSlider,           // sliders to step through the slices (z and y directions)
+            ySliceSlider,                   // (remember 113 slices in z direction 0-112)
+            xSliceSlider;
+    private @NonNull BufferedImage zImage1, // storing the image in memory
+            yImage2,
+            xImage3;
+    private short cthead[][][];             // store the 3D volume data set
+    private short min, max;                 // min/max value in the 3D volume data set
 
     /*
      ///////////////////
@@ -137,6 +51,7 @@ public class CTScanView extends JFrame {
         super(title);
 
         // add and set file filter to file chooser.
+        FileFilter filter = new DmsFileFilter();
         this.fileChooser.addChoosableFileFilter(filter);
         this.fileChooser.setFileFilter(filter);
 
@@ -155,9 +70,11 @@ public class CTScanView extends JFrame {
         BorderLayout borderLayout = new BorderLayout();
         container.setLayout(borderLayout);
 
+        JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new FlowLayout(FlowLayout.LEADING));
         container.add(titlePanel, BorderLayout.NORTH);
 
+        JPanel imagesPanel = new JPanel();
         imagesPanel.setLayout(new FlowLayout());
         container.add(imagesPanel, BorderLayout.CENTER);
 
@@ -173,84 +90,14 @@ public class CTScanView extends JFrame {
         container.add(gridScrollPane, BorderLayout.SOUTH);
 
         loadButton = new JButton("Load file...");
-        final JFrame thisFrame = this;
-        loadButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // open file chooser dialog
-                fileChooser.showOpenDialog(thisFrame);
-                System.out.println(fileChooser.getSelectedFile());
-                try {
-                    DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(fileChooser.getSelectedFile())));
+        final CTScanView thisFrame = this;
+        loadButton.addActionListener(new LoadButtonActionListener(thisFrame));
 
-                    loadData(in);
-
-                    zSliceSlider.setEnabled(true);  // activate slider only when file is loaded
-                    ySliceSlider.setEnabled(true);  // activate slider only when file is loaded
-                    xSliceSlider.setEnabled(true);  // activate slider only when file is loaded
-                    mipButton.setEnabled(true);     // activate button only when file is loaded
-
-                    for (int imgNr = 0; imgNr < 113; imgNr++) {
-                        final int num = imgNr;
-                        SwingUtilities.invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                BufferedImage image = updateAxis(zImage1, num, ImageUpdateDirection.Z_AXIS);
-                                BufferedImage scaledImage = scale(128, 128, image);
-                                JLabel label = new JLabel(new ImageIcon(scaledImage));
-                                gridPanel.add(label);
-                            }
-                        });
-                    }
-
-                    for (int imgNr = 0; imgNr < 256; imgNr++) {
-                        final int num = imgNr;
-                        SwingUtilities.invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                BufferedImage image = updateAxis(yImage2, num, ImageUpdateDirection.Y_AXIS);
-                                BufferedImage scaledImage = scale(128, 128, image);
-                                JLabel label = new JLabel(new ImageIcon(scaledImage));
-                                gridPanel.add(label);
-                            }
-                        });
-                    }
-
-                    for (int imgNr = 0; imgNr < 256; imgNr++) {
-                        final int num = imgNr;
-                        SwingUtilities.invokeLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                BufferedImage image = updateAxis(xImage3, num, ImageUpdateDirection.X_AXIS);
-                                BufferedImage scaledImage = scale(128, 128, image);
-                                JLabel label = new JLabel(new ImageIcon(scaledImage));
-                                gridPanel.add(label);
-                            }
-                        });
-                    }
-
-                    SwingUtilities.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            gridScrollPane.setPreferredSize(new Dimension(1089, 276));
-                            gridPanel.validate();
-                            gridPanel.getParent().validate();
-                            thisFrame.pack();
-                            thisFrame.setLocationRelativeTo(null);
-                        }
-                    });
-
-                    updateImage(ImageUpdateDirection.X_AXIS);
-                    updateImage(ImageUpdateDirection.Y_AXIS);
-                    updateImage(ImageUpdateDirection.Z_AXIS);
-
-                } catch (IOException ioe) {
-                    ioe.printStackTrace();
-                }
-            }
-        });
+        // Then the invert button
+        mipButton = new JButton("MIP");
 
         //Zslice slider
+        //@see https://docs.oracle.com/javase/7/docs/api/javax/swing/JSlider.html
         zSliceSlider = new JSlider(0, 112);
         zSliceSlider.setOrientation(JSlider.VERTICAL);
         zSliceSlider.setToolTipText("zAxis");
@@ -276,9 +123,6 @@ public class CTScanView extends JFrame {
         xSliceSlider.setMinorTickSpacing(10);
         xSliceSlider.setPaintTicks(true);
         xSliceSlider.setPaintLabels(true);
-        //see
-        //https://docs.oracle.com/javase/7/docs/api/javax/swing/JSlider.html
-        //for documentation (e.g. how to get the value, how to display vertically if you want)
 
         // Then our image (as a label icon)
         imageIcon1 = new JLabel(new ImageIcon(zImage1));
@@ -335,11 +179,9 @@ public class CTScanView extends JFrame {
             }
         });
 
-        // Then the invert button
-        mipButton = new JButton("MIP");
-
         // add elements to ui, order matters in flow layout
         titlePanel.add(loadButton);
+        titlePanel.add(mipButton);
 
         imagesPanel.add(imageIcon1);
         imagesPanel.add(zSliceSlider);
@@ -347,7 +189,6 @@ public class CTScanView extends JFrame {
         imagesPanel.add(ySliceSlider);
         imagesPanel.add(imageIcon3);
         imagesPanel.add(xSliceSlider);
-        imagesPanel.add(mipButton);
 
         // Now all the handlers class
         GUIEventHandler handler = new GUIEventHandler(this);
@@ -373,9 +214,23 @@ public class CTScanView extends JFrame {
         System.out.println(this.getWidth());
 
         setLocationRelativeTo(null);
+        ComponentListener componentListener = new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                super.componentShown(e);
+                loadButton.setEnabled(true); // activate load button when ui is shown.
+            }
+        };
         addComponentListener(componentListener);
         setVisible(true);
 
+    }
+
+    public void enableControls() {
+        zSliceSlider.setEnabled(true);  // activate slider only when file is loaded
+        ySliceSlider.setEnabled(true);  // activate slider only when file is loaded
+        xSliceSlider.setEnabled(true);  // activate slider only when file is loaded
+        mipButton.setEnabled(true);     // activate button only when file is loaded
     }
 
     /*
@@ -384,7 +239,7 @@ public class CTScanView extends JFrame {
      ///////////////////////
      */
 
-    private void loadData(DataInputStream in) throws IOException {
+    public void loadData(DataInputStream in) throws IOException {
 
         min = Short.MAX_VALUE;
         max = Short.MIN_VALUE; //set to extreme values
@@ -489,7 +344,7 @@ public class CTScanView extends JFrame {
         return image;
     }
 
-    private BufferedImage updateAxis(BufferedImage image, int sliderValue, ImageUpdateDirection axisDirection) {
+    public BufferedImage updateAxis(BufferedImage image, int sliderValue, ImageUpdateDirection axisDirection) {
         final int width = image.getWidth(), height = image.getHeight();
         final byte[] data = getImageData(image);
         float color;
@@ -535,7 +390,7 @@ public class CTScanView extends JFrame {
         return image;
     }
 
-    private BufferedImage scale(int scaledWith, int scaledHeight, BufferedImage image) {
+    public BufferedImage scale(int scaledWith, int scaledHeight, BufferedImage image) {
 
         float width = image.getWidth(), height = image.getHeight();
         float xRatio = scaledWith / width, yRatio = scaledHeight / height;
@@ -556,7 +411,7 @@ public class CTScanView extends JFrame {
         return lerp(lerp(c00, c10, tx), lerp(c01, c11, tx), ty);
     }
 
-    private BufferedImage scaleRatio(float scaleX, float scaleY, BufferedImage image) {
+    public BufferedImage scaleRatio(float scaleX, float scaleY, BufferedImage image) {
 
         final int width = image.getWidth();
         final int height = image.getHeight();
@@ -596,6 +451,18 @@ public class CTScanView extends JFrame {
      //  Getter  //
      //////////////
      */
+
+    public JFileChooser getFileChooser() {
+        return fileChooser;
+    }
+
+    public JPanel getGridPanel() {
+        return gridPanel;
+    }
+
+    public JScrollPane getGridScrollPane() {
+        return gridScrollPane;
+    }
 
     public BufferedImage getzImage1() {
         return zImage1;
@@ -666,13 +533,10 @@ public class CTScanView extends JFrame {
 
         // init ui in a swing ui thread. THIS IS recommended because it much more stable on most OS.
         // Cause a smoother presentation of the frame.
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                JFrame frame = new CTScanView("CT Scan View");
-                frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-            }
-        });
+        SwingUtilities.invokeLater( () -> {
+            JFrame frame = new CTScanView("CT Scan View");
+            frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        } );
 
     }
 }
