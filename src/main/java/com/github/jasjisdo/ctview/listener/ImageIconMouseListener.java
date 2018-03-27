@@ -24,8 +24,8 @@ public class ImageIconMouseListener extends MouseAdapter {
     }
 
     @Override
-    public void mouseClicked(MouseEvent e) {
-        super.mouseClicked(e);
+    public void mouseClicked(MouseEvent event) {
+        super.mouseClicked(event);
         BufferedImage image = (BufferedImage) ((ImageIcon) imageIcon.getIcon()).getImage();
         open(prepareDetailFrame(parentFrame.scale(512, 512, image)));
     }
