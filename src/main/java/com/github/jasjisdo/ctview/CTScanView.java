@@ -3,6 +3,7 @@ package com.github.jasjisdo.ctview;
 import com.github.jasjisdo.ctview.components.DetailImageFrame;
 import com.github.jasjisdo.ctview.eventhandler.GUIEventHandler;
 import com.github.jasjisdo.ctview.filefilter.DmsFileFilter;
+import com.github.jasjisdo.ctview.listener.ImageIconMouseListener;
 import com.github.jasjisdo.ctview.listener.LoadButtonActionListener;
 import lombok.NonNull;
 
@@ -124,60 +125,20 @@ public class CTScanView extends JFrame {
         xSliceSlider.setPaintTicks(true);
         xSliceSlider.setPaintLabels(true);
 
-        // Then our image (as a label icon)
+        // Then the ct scan images for dimensions ZYX (as a label icons)
+        // Z dimension
         imageIcon1 = new JLabel(new ImageIcon(zImage1));
-        imageIcon1.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
+        imageIcon1.addMouseListener(new ImageIconMouseListener(this, imageIcon1));
 
-                BufferedImage image = (BufferedImage)((ImageIcon)imageIcon1.getIcon()).getImage();
-                image = scale(512, 512, image);
-
-                JFrame frame = new DetailImageFrame(thisFrame, image);
-                frame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-                frame.pack();
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
-
-            }
-        });
+        // Y dimension
         BufferedImage scaledImage2 = scale(256, 256, yImage2);
         imageIcon2 = new JLabel(new ImageIcon(scaledImage2));
-        imageIcon2.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
+        imageIcon2.addMouseListener(new ImageIconMouseListener(this, imageIcon2));
 
-                BufferedImage image = (BufferedImage)((ImageIcon)imageIcon2.getIcon()).getImage();
-                image = scale(512, 512, image);
-
-                JFrame frame = new DetailImageFrame(thisFrame, image);
-                frame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-                frame.pack();
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
-
-            }
-        });
+        // X dimension
         BufferedImage scaledImage3 = scale(256, 256, xImage3);
         imageIcon3 = new JLabel(new ImageIcon(scaledImage3));
-        imageIcon3.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
-
-                BufferedImage image = (BufferedImage)((ImageIcon)imageIcon3.getIcon()).getImage();
-                image = scale(512, 512, image);
-
-                JFrame frame = new DetailImageFrame(thisFrame, image);
-                frame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-                frame.pack();
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
-
-            }
-        });
+        imageIcon3.addMouseListener(new ImageIconMouseListener(this, imageIcon3));
 
         // add elements to ui, order matters in flow layout
         titlePanel.add(loadButton);
