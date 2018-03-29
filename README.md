@@ -1,5 +1,6 @@
 # ctview
-java swing application to view computed tomography scanned medical images
+
+Java8 Swing Application to view Computed Tomography Scanned Medical Images.
 
 ![demo animation](https://github.com/jasjisdo/ctview/raw/master/doc/demo.gif)
 
